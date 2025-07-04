@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Time Sheet with In/Out Photo Capture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .form-section, .table-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .photo-container {
+            margin: 15px 0;
+            text-align: center;
+        }
+        #webcam, #webcamOut {
+            width: 320px;
+            height: 240px;
+            background-color: #eee;
+            margin-bottom: 10px;
+            display: none;
+        }
+        #photoCanvas, #photoCanvasOut {
+            display: none;
+        }
+        #photoPreview, #photoPreviewOut {
+            max-width: 320px;
+            max-height: 240px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .thumbnail {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            margin-top: 50px;
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #bbb;
+        }
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .search-container input {
+            flex: 1;
+            min-width: 200px;
+        }
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+        .edit-btn {
+            background-color: #f39c12;
+        }
+        .checkin-btn {
+            background-color: #27ae60;
+        }
+        .checkout-btn {
+            background-color: #3498db;
+        }
+        .email-btn {
+            background-color: #EA4335;
+        }
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        .tab-buttons button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin-right: 20px;
+            object-fit: contain;
+        }
+        .header-text {
+            flex: 1;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .print-header {
+            display: none;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+        }
+        .print-logo {
+            width: 80px;
+            height: 80px;
+            margin-right: 15px;
+            object-fit: contain;
+        }
+        .print-header-text {
+            flex: 1;
+        }
+        .print-company-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .print-title {
+            font-size: 18px;
+            margin: 0;
+        }
+        .status-checked-in {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-checked-out {
+            color: #3498db;
+            font-weight: bold;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-section, .print-section *,
+            .print-header, .print-header * {
+                visibility: visible;
+            }
+            .print-section {
+                position: absolute;
+                left: 0;
+                top: 120px;
+                width: 100%;
+            }
+            .print-header {
+                display: flex !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+            table {
+                width: 100%;
+                font-size: 12px;
+            }
+            th, td {
+                padding: 5px;
+            }
+        }
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .logo {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            .tab-buttons {
+                flex-direction: column;
+            }
+            #webcam, #webcamOut, #photoPreview, #photoPreviewOut {
+                width: 100%;
+                max-width: 320px;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Regular header (visible on screen) -->
+        <div class="header no-print">
+            <img src="727b5fd2-06dc-4a68-8b36-c993d0fe6782 (1).jpg" alt="Company Logo" class="logo">
+            <div class="header-text">
+                <div class="company-name">MA M&E Services Pte Ltd</div>
+                <h1>Employee Time Sheet with In/Out Photo Capture</h1>
+            </div>
+        </div>
+        
+        <!-- Print header (hidden on screen, visible when printing) -->
+        <div class="print-header">
+            <img src="727b5fd2-06dc-4a68-8b36-c993d0fe6782 (1).jpg" alt="Company Logo" class="print-logo">
+            <div class="print-header-text">
+                <div class="print-company-name">MA M&E Services Pte Ltd</div>
+                <h1 class="print-title">Employee Time Sheet with In/Out Photo Capture</h1>
+                <p>Generated on: <span id="printDate"></span></p>
+            </div>
+        </div>
+        
+        <div class="form-section no-print">
+            <div class="tab-buttons">
+                <button id="checkInTab" class="checkin-btn active">Check-In</button>
+                <button id="checkOutTab" class="checkout-btn">Check-Out</button>
+            </div>
+            
+            <div id="checkInForm" class="tab-content active">
+                <h2>Employee Check-In</h2>
+                <form id="timeSheetFormIn">
+                    <input type="hidden" id="editRecordId" value="">
+                    <div class="form-group">
+                        <label for="employeeNameIn">Employee Name</label>
+                        <input type="text" id="employeeNameIn" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="employeeIDIn">Employee ID</label>
+                        <input type="text" id="employeeIDIn" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="workPlaceIn">Work Location/Place</label>
+                        <input type="text" id="workPlaceIn" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateTimeIn">Date & Time</label>
+                        <input type="text" id="dateTimeIn" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="workLocationIn">Work / Task</label>
+                        <select id="workLocationIn" required>
+                            <option value="">Select Location/Task</option>
+                            <option value="Office">Office</option>
+                            <option value="Remote">Remote</option>
+                            <option value="Field Work">Field Work</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Training">Training</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Check-In Photo Capture</label>
+                        <div class="photo-container">
+                            <video id="webcam" autoplay playsinline></video>
+                            <canvas id="photoCanvas"></canvas>
+                            <img id="photoPreview" alt="Captured photo preview">
+                            <div>
+                                <button type="button" id="startCameraBtn" class="checkin-btn">Start Camera</button>
+                                <button type="button" id="captureBtn" style="display:none;" class="checkin-btn">Capture Photo</button>
+                                <button type="button" id="retakeBtn" style="display:none;" class="delete-btn">Retake Photo</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit" id="saveBtnIn" class="checkin-btn">Save Check-In</button>
+                        <button type="button" id="clearFormBtnIn">Clear Form</button>
+                        <button type="button" id="cancelEditBtn" style="display:none;" class="delete-btn">Cancel Edit</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="checkOutForm" class="tab-content">
+                <h2>Employee Check-Out</h2>
+                <form id="timeSheetFormOut">
+                    <div class="form-group">
+                        <label for="employeeIDOut">Employee ID</label>
+                        <input type="text" id="employeeIDOut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateTimeOut">Date & Time</label>
+                        <input type="text" id="dateTimeOut" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Check-Out Photo Capture</label>
+                        <div class="photo-container">
+                            <video id="webcamOut" autoplay playsinline></video>
+                            <canvas id="photoCanvasOut"></canvas>
+                            <img id="photoPreviewOut" alt="Captured photo preview">
+                            <div>
+                                <button type="button" id="startCameraBtnOut" class="checkout-btn">Start Camera</button>
+                                <button type="button" id="captureBtnOut" style="display:none;" class="checkout-btn">Capture Photo</button>
+                                <button type="button" id="retakeBtnOut" style="display:none;" class="delete-btn">Retake Photo</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button type="submit" id="saveBtnOut" class="checkout-btn">Save Check-Out</button>
+                        <button type="button" id="clearFormBtnOut">Clear Form</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <h2 class="no-print">Time Sheet Records</h2>
+            
+            <div class="search-container no-print">
+                <input type="text" id="searchInput" placeholder="Search by name, ID or task...">
+                <button type="button" id="searchBtn" class="checkin-btn">Search</button>
+                <button type="button" id="resetSearchBtn">Reset</button>
+                <button type="button" id="printBtn" class="checkout-btn">Print Records</button>
+                <button type="button" id="emailAllBtn" class="email-btn">Email All Records</button>
+            </div>
+            
+            <div class="print-section">
+                <table id="timeSheetTable">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Work Place</th>
+                            <th>In Time</th>
+                            <th>In Photo</th>
+                            <th>Out Time</th>
+                            <th>Out Photo</th>
+                            <th>Location/Task</th>
+                            <th>Status</th>
+                            <th class="no-print">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Records will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div id="photoModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script>
+        // DOM Elements
+        const checkInTab = document.getElementById('checkInTab');
+        const checkOutTab = document.getElementById('checkOutTab');
+        const checkInForm = document.getElementById('checkInForm');
+        const checkOutForm = document.getElementById('checkOutForm');
+        
+        // Check-in form elements
+        const timeSheetFormIn = document.getElementById('timeSheetFormIn');
+        const editRecordId = document.getElementById('editRecordId');
+        const employeeNameIn = document.getElementById('employeeNameIn');
+        const employeeIDIn = document.getElementById('employeeIDIn');
+        const workPlaceIn = document.getElementById('workPlaceIn');
+        const dateTimeIn = document.getElementById('dateTimeIn');
+        const workLocationIn = document.getElementById('workLocationIn');
+        const webcam = document.getElementById('webcam');
+        const photoCanvas = document.getElementById('photoCanvas');
+        const photoPreview = document.getElementById('photoPreview');
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const saveBtnIn = document.getElementById('saveBtnIn');
+        const clearFormBtnIn = document.getElementById('clearFormBtnIn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        
+        // Check-out form elements
+        const timeSheetFormOut = document.getElementById('timeSheetFormOut');
+        const employeeIDOut = document.getElementById('employeeIDOut');
+        const dateTimeOut = document.getElementById('dateTimeOut');
+        const webcamOut = document.getElementById('webcamOut');
+        const photoCanvasOut = document.getElementById('photoCanvasOut');
+        const photoPreviewOut = document.getElementById('photoPreviewOut');
+        const startCameraBtnOut = document.getElementById('startCameraBtnOut');
+        const captureBtnOut = document.getElementById('captureBtnOut');
+        const retakeBtnOut = document.getElementById('retakeBtnOut');
+        const saveBtnOut = document.getElementById('saveBtnOut');
+        const clearFormBtnOut = document.getElementById('clearFormBtnOut');
+        
+        const tableBody = document.getElementById('tableBody');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resetSearchBtn = document.getElementById('resetSearchBtn');
+        const printBtn = document.getElementById('printBtn');
+        const emailAllBtn = document.getElementById('emailAllBtn');
+        const photoModal = document.getElementById('photoModal');
+        const modalImage = document.getElementById('modalImage');
+        const closeModal = document.getElementsByClassName('close')[0];
+        const printDate = document.getElementById('printDate');
+
+        // Global variables
+        let streamIn = null;
+        let streamOut = null;
+        let currentPhotoDataIn = null;
+        let currentPhotoDataOut = null;
+        let allRecords = JSON.parse(localStorage.getItem('timeSheetRecords')) || [];
+        let isEditing = false;
+
+        // Initialize the application
+        function init() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            setupEventListeners();
+            loadRecords();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Event listeners for tabs
+            checkInTab.addEventListener('click', () => switchTab('checkIn'));
+            checkOutTab.addEventListener('click', () => switchTab('checkOut'));
+            
+            // Event listeners for check-in form
+            timeSheetFormIn.addEventListener('submit', saveCheckIn);
+            startCameraBtn.addEventListener('click', startCamera);
+            captureBtn.addEventListener('click', capturePhotoIn);
+            retakeBtn.addEventListener('click', retakePhotoIn);
+            clearFormBtnIn.addEventListener('click', clearFormIn);
+            cancelEditBtn.addEventListener('click', cancelEdit);
+            
+            // Event listeners for check-out form
+            timeSheetFormOut.addEventListener('submit', saveCheckOut);
+            startCameraBtnOut.addEventListener('click', startCameraOut);
+            captureBtnOut.addEventListener('click', capturePhotoOut);
+            retakeBtnOut.addEventListener('click', retakePhotoOut);
+            clearFormBtnOut.addEventListener('click', clearFormOut);
+            
+            // Event listeners for table operations
+            searchBtn.addEventListener('click', searchRecords);
+            resetSearchBtn.addEventListener('click', resetSearch);
+            printBtn.addEventListener('click', printRecords);
+            emailAllBtn.addEventListener('click', sendAllViaEmail);
+            
+            // Modal events
+            closeModal.addEventListener('click', () => photoModal.style.display = 'none');
+            photoModal.addEventListener('click', (e) => {
+                if (e.target === photoModal) {
+                    photoModal.style.display = 'none';
+                }
+            });
+        }
+
+        // Switch between check-in and check-out tabs
+        function switchTab(tab) {
+            if (tab === 'checkIn') {
+                checkInForm.classList.add('active');
+                checkOutForm.classList.remove('active');
+                checkInTab.classList.add('active');
+                checkOutTab.classList.remove('active');
+            } else {
+                checkInForm.classList.remove('active');
+                checkOutForm.classList.add('active');
+                checkInTab.classList.remove('active');
+                checkOutTab.classList.add('active');
+            }
+        }
+
+        // Update date and time fields
+        function updateDateTime() {
+            const now = new Date();
+            dateTimeIn.value = now.toLocaleString();
+            dateTimeOut.value = now.toLocaleString();
+            printDate.textContent = now.toLocaleDateString();
+        }
+
+        // Start camera for check-in
+        async function startCamera() {
+            try {
+                if (streamIn) {
+                    streamIn.getTracks().forEach(track => track.stop());
+                }
+                streamIn = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                webcam.srcObject = streamIn;
+                webcam.style.display = 'block';
+                startCameraBtn.style.display = 'none';
+                captureBtn.style.display = 'inline-block';
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Could not access webcam. Please ensure you've granted camera permissions.");
+                webcam.style.display = 'none';
+                captureBtn.style.display = 'none';
+            }
+        }
+
+        // Start camera for check-out
+        async function startCameraOut() {
+            try {
+                if (streamOut) {
+                    streamOut.getTracks().forEach(track => track.stop());
+                }
+                streamOut = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                webcamOut.srcObject = streamOut;
+                webcamOut.style.display = 'block';
+                startCameraBtnOut.style.display = 'none';
+                captureBtnOut.style.display = 'inline-block';
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Could not access webcam. Please ensure you've granted camera permissions.");
+                webcamOut.style.display = 'none';
+                captureBtnOut.style.display = 'none';
+            }
+        }
+
+        // Capture photo for check-in
+        function capturePhotoIn() {
+            if (!streamIn) return;
+            
+            const context = photoCanvas.getContext('2d');
+            photoCanvas.width = webcam.videoWidth;
+            photoCanvas.height = webcam.videoHeight;
+            context.drawImage(webcam, 0, 0, photoCanvas.width, photoCanvas.height);
+            
+            currentPhotoDataIn = photoCanvas.toDataURL('image/jpeg', 0.8);
+            photoPreview.src = currentPhotoDataIn;
+            photoPreview.style.display = 'block';
+            captureBtn.style.display = 'none';
+            retakeBtn.style.display = 'inline-block';
+        }
+
+        // Retake photo for check-in
+        function retakePhotoIn() {
+            currentPhotoDataIn = null;
+            photoPreview.style.display = 'none';
+            captureBtn.style.display = 'inline-block';
+            retakeBtn.style.display = 'none';
+        }
+
+        // Capture photo for check-out
+        function capturePhotoOut() {
+            if (!streamOut) return;
+            
+            const context = photoCanvasOut.getContext('2d');
+            photoCanvasOut.width = webcamOut.videoWidth;
+            photoCanvasOut.height = webcamOut.videoHeight;
+            context.drawImage(webcamOut, 0, 0, photoCanvasOut.width, photoCanvasOut.height);
+            
+            currentPhotoDataOut = photoCanvasOut.toDataURL('image/jpeg', 0.8);
+            photoPreviewOut.src = currentPhotoDataOut;
+            photoPreviewOut.style.display = 'block';
+            captureBtnOut.style.display = 'none';
+            retakeBtnOut.style.display = 'inline-block';
+        }
+
+        // Retake photo for check-out
+        function retakePhotoOut() {
+            currentPhotoDataOut = null;
+            photoPreviewOut.style.display = 'none';
+            captureBtnOut.style.display = 'inline-block';
+            retakeBtnOut.style.display = 'none';
+        }
+
+        // Save check-in record
+        function saveCheckIn(e) {
+            e.preventDefault();
+            
+            const record = {
+                id: isEditing ? editRecordId.value : Date.now().toString(),
+                name: employeeNameIn.value.trim(),
+                employeeID: employeeIDIn.value.trim(),
+                workPlace: workPlaceIn.value.trim(),
+                inDateTime: dateTimeIn.value,
+                inPhotoData: currentPhotoDataIn,
+                outDateTime: '',
+                outPhotoData: '',
+                location: workLocationIn.value,
+                status: 'Checked In'
+            };
+            
+            if (isEditing) {
+                // Update existing record
+                const index = allRecords.findIndex(r => r.id === record.id);
+                if (index !== -1) {
+                    // Preserve check-out data if it exists
+                    if (allRecords[index].outDateTime) {
+                        record.outDateTime = allRecords[index].outDateTime;
+                        record.outPhotoData = allRecords[index].outPhotoData;
+                        record.status = allRecords[index].status;
+                    }
+                    allRecords[index] = record;
+                }
+                isEditing = false;
+                saveBtnIn.textContent = 'Save Check-In';
+                cancelEditBtn.style.display = 'none';
+            } else {
+                // Add new record
+                allRecords.unshift(record);
+            }
+            
+            localStorage.setItem('timeSheetRecords', JSON.stringify(allRecords));
+            loadRecords();
+            clearFormIn();
+            
+            if (streamIn) {
+                streamIn.getTracks().forEach(track => track.stop());
+                streamIn = null;
+                webcam.style.display = 'none';
+            }
+        }
+
+        // Save check-out record
+        function saveCheckOut(e) {
+            e.preventDefault();
+            
+            const employeeID = employeeIDOut.value.trim();
+            const existingRecordIndex = allRecords.findIndex(r => r.employeeID === employeeID && r.status === 'Checked In');
+            
+            if (existingRecordIndex === -1) {
+                alert('No check-in record found for this employee ID');
+                return;
+            }
+            
+            allRecords[existingRecordIndex].outDateTime = dateTimeOut.value;
+            allRecords[existingRecordIndex].outPhotoData = currentPhotoDataOut;
+            allRecords[existingRecordIndex].status = 'Checked Out';
+            
+            localStorage.setItem('timeSheetRecords', JSON.stringify(allRecords));
+            loadRecords();
+            clearFormOut();
+            
+            if (streamOut) {
+                streamOut.getTracks().forEach(track => track.stop());
+                streamOut = null;
+                webcamOut.style.display = 'none';
+            }
+        }
+
+        // Load records from localStorage
+        function loadRecords(filteredRecords = null) {
+            const recordsToDisplay = filteredRecords || allRecords;
+            tableBody.innerHTML = '';
+            
+            if (recordsToDisplay.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No records found</td></tr>';
+                return;
+            }
+            
+            recordsToDisplay.forEach((record, index) => {
+                const row = document.createElement('tr');
+                row.dataset.id = record.id;
+                
+                // Format dates and times
+                const inDateTimeObj = new Date(record.inDateTime);
+                const inDateStr = inDateTimeObj.toLocaleDateString();
+                const inTimeStr = inDateTimeObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                let outDateStr = '';
+                let outTimeStr = '';
+                
+                if (record.outDateTime) {
+                    const outDateTimeObj = new Date(record.outDateTime);
+                    outDateStr = outDateTimeObj.toLocaleDateString();
+                    outTimeStr = outDateTimeObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${record.name}</td>
+                    <td>${record.employeeID}</td>
+                    <td>${inDateStr}</td>
+                    <td>${record.workPlace || '-'}</td>
+                    <td>${inTimeStr}</td>
+                    <td>
+                        ${record.inPhotoData ? 
+                            `<img src="${record.inPhotoData}" class="thumbnail" onclick="showEnlargedPhoto('${record.inPhotoData}')">` : 
+                            'No photo'}
+                    </td>
+                    <td>${outTimeStr || '-'}</td>
+                    <td>
+                        ${record.outPhotoData ? 
+                            `<img src="${record.outPhotoData}" class="thumbnail" onclick="showEnlargedPhoto('${record.outPhotoData}')">` : 
+                            'No photo'}
+                    </td>
+                    <td>${record.location}</td>
+                    <td class="${record.status === 'Checked In' ? 'status-checked-in' : 'status-checked-out'}">${record.status}</td>
+                    <td class="no-print action-buttons">
+                        <button class="edit-btn" onclick="editRecord('${record.id}')">Edit</button>
+                        <button class="email-btn" onclick="sendRecordViaEmail('${record.id}')">Email</button>
+                        <button class="delete-btn" onclick="deleteRecord('${record.id}')">Delete</button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Edit record
+        function editRecord(id) {
+            const record = allRecords.find(r => r.id === id);
+            if (!record) return;
+            
+            // Switch to check-in tab
+            switchTab('checkIn');
+            
+            // Fill the form with record data
+            editRecordId.value = record.id;
+            employeeNameIn.value = record.name;
+            employeeIDIn.value = record.employeeID;
+            workPlaceIn.value = record.workPlace || '';
+            workLocationIn.value = record.location;
+            
+            // Handle photo
+            if (record.inPhotoData) {
+                currentPhotoDataIn = record.inPhotoData;
+                photoPreview.src = currentPhotoDataIn;
+                photoPreview.style.display = 'block';
+                startCameraBtn.style.display = 'none';
+                captureBtn.style.display = 'none';
+                retakeBtn.style.display = 'inline-block';
+            } else {
+                startCameraBtn.style.display = 'inline-block';
+            }
+            
+            // Update button states
+            isEditing = true;
+            saveBtnIn.textContent = 'Update Record';
+            cancelEditBtn.style.display = 'inline-block';
+            
+            // Scroll to form
+            document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cancel edit
+        function cancelEdit() {
+            isEditing = false;
+            saveBtnIn.textContent = 'Save Check-In';
+            cancelEditBtn.style.display = 'none';
+            clearFormIn();
+        }
+
+        // Delete record
+        function deleteRecord(id) {
+            if (confirm('Are you sure you want to delete this record?')) {
+                allRecords = allRecords.filter(record => record.id !== id);
+                localStorage.setItem('timeSheetRecords', JSON.stringify(allRecords));
+                loadRecords();
+            }
+        }
+
+        // Clear check-in form
+        function clearFormIn() {
+            timeSheetFormIn.reset();
+            editRecordId.value = '';
+            updateDateTime();
+            retakePhotoIn();
+            startCameraBtn.style.display = 'inline-block';
+            webcam.style.display = 'none';
+        }
+
+        // Clear check-out form
+        function clearFormOut() {
+            timeSheetFormOut.reset();
+            updateDateTime();
+            retakePhotoOut();
+            startCameraBtnOut.style.display = 'inline-block';
+            webcamOut.style.display = 'none';
+        }
+
+        // Search records
+        function searchRecords() {
+            const searchTerm = searchInput.value.trim().toLowerCase();
+            if (!searchTerm) {
+                loadRecords();
+                return;
+            }
+            
+            const filtered = allRecords.filter(record => 
+                record.name.toLowerCase().includes(searchTerm) ||
+                record.employeeID.toLowerCase().includes(searchTerm) ||
+                (record.workPlace && record.workPlace.toLowerCase().includes(searchTerm)) ||
+                record.location.toLowerCase().includes(searchTerm) ||
+                record.inDateTime.toLowerCase().includes(searchTerm) ||
+                (record.outDateTime && record.outDateTime.toLowerCase().includes(searchTerm))
+            );
+            
+            loadRecords(filtered);
+        }
+
+        // Reset search
+        function resetSearch() {
+            searchInput.value = '';
+            loadRecords();
+        }
+
+        // Print records
+        function printRecords() {
+            if (allRecords.length === 0) {
+                alert('No records to print');
+                return;
+            }
+            
+            // Update print date
+            printDate.textContent = new Date().toLocaleDateString();
+            
+            // Show the print header before printing
+            const printHeader = document.querySelector('.print-header');
+            printHeader.style.display = 'flex';
+            
+            window.print();
+            
+            // Hide the print header after printing
+            setTimeout(() => {
+                printHeader.style.display = 'none';
+            }, 500);
+        }
+
+        // Send all records via Email
+        function sendAllViaEmail() {
+            if (allRecords.length === 0) {
+                alert('No records to send');
+                return;
+            }
+            
+            // Create email content
+            let subject = `Employee Time Sheet Records - ${new Date().toLocaleDateString()}`;
+            let body = "MA M&E Services Pte Ltd\n";
+            body += "Employee Time Sheet Records\n\n";
+            body += "All Employee Records:\n\n";
+            
+            allRecords.forEach((record, index) => {
+                const inDateTime = new Date(record.inDateTime);
+                const outDateTime = record.outDateTime ? new Date(record.outDateTime) : null;
+                
+                body += `Record ${index + 1}:\n`;
+                body += `Name: ${record.name}\n`;
+                body += `ID: ${record.employeeID}\n`;
+                body += `Date: ${inDateTime.toLocaleDateString()}\n`;
+                body += `Work Place: ${record.workPlace || '-'}\n`;
+                body += `In Time: ${inDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}\n`;
+                body += `Out Time: ${outDateTime ? outDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Not checked out'}\n`;
+                body += `Location: ${record.location}\n`;
+                body += `Status: ${record.status}\n\n`;
+            });
+            
+            // Encode subject and body for mailto URL
+            const encodedSubject = encodeURIComponent(subject);
+            const encodedBody = encodeURIComponent(body);
+            const adminEmail = 'karthikeyanlingam204@gmail.com';
+            
+            // Open default email client
+            window.open(`mailto:${adminEmail}?subject=${encodedSubject}&body=${encodedBody}`);
+        }
+
+        // Send single record via Email
+        function sendRecordViaEmail(id) {
+            const record = allRecords.find(r => r.id === id);
+            if (!record) return;
+            
+            const inDateTime = new Date(record.inDateTime);
+            const outDateTime = record.outDateTime ? new Date(record.outDateTime) : null;
+            
+            let subject = `Time Sheet Record - ${record.name} - ${inDateTime.toLocaleDateString()}`;
+            let body = `Employee Name: ${record.name}\n`;
+            body += `Employee ID: ${record.employeeID}\n`;
+            body += `Date: ${inDateTime.toLocaleDateString()}\n`;
+            body += `Work Place: ${record.workPlace || '-'}\n`;
+            body += `In Time: ${inDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}\n`;
+            body += `Out Time: ${outDateTime ? outDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Not checked out'}\n`;
+            body += `Location: ${record.location}\n`;
+            body += `Status: ${record.status}\n\n`;
+            body += "This is a record from MA M&E Services Pte Ltd";
+            
+            // Encode subject and body for mailto URL
+            const encodedSubject = encodeURIComponent(subject);
+            const encodedBody = encodeURIComponent(body);
+            const adminEmail = 'karthikeyanlingam204@gmail.com';
+            
+            // Open default email client
+            window.open(`mailto:${adminEmail}?subject=${encodedSubject}&body=${encodedBody}`);
+        }
+
+        // Show enlarged photo in modal
+        function showEnlargedPhoto(photoData) {
+            modalImage.src = photoData;
+            photoModal.style.display = 'block';
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Make functions available globally for inline event handlers
+        window.deleteRecord = deleteRecord;
+        window.editRecord = editRecord;
+        window.showEnlargedPhoto = showEnlargedPhoto;
+        window.sendRecordViaEmail = sendRecordViaEmail;
+    </script>
+</body>
+</html>
